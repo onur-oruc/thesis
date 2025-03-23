@@ -1,0 +1,22 @@
+## MultiSig Wallets and Governance
+
+- The main responsibility of the governance system is to ensure the authenticity of the data written to the chain through distributed approval processes.
+
+- Instead of traditional multisig wallets, we'll implement OpenZeppelin's Governor pattern for OEM operations:
+  - A Governor contract will handle proposals and voting for permission management
+  - Custom vote counting logic will enable tiered approval requirements without token-based voting
+  - A whitelist of authorized OEM representatives will control who can create and vote on proposals
+
+- The OEM representatives will use their standard Ethereum wallets with tiered approval requirements:
+  - Critical operations (battery NFT issuance, permission NFT creation): 2-of-3 approvals
+  - Routine operations (data updates, metadata changes): 1-of-3 approval
+
+- The governance system automatically categorizes proposals based on their function calls and required approval threshold.
+
+- Since dynamic private battery data needs frequent updates, the governance participants will be limited to entities inside the same OEM to avoid collaboration overhead.
+
+- Government approval system: A separate Governor contract will manage government approvals for OEMs, allowing multiple government representatives to approve legitimate battery manufacturers collectively.
+
+- Repair Shop: They will use traditional (one-signature) wallets for simplicity and speed in day-to-day operations. The permission NFTs will be transferred to these wallets, allowing repair shops to sign transactions for change logs.
+
+- The governance system will include a TimeController for sensitive operations that require delay before execution. 
