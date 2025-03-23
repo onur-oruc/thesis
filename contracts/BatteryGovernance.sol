@@ -83,6 +83,9 @@ contract BatteryGovernance is AccessControl {
         string memory description,
         ProposalType proposalType
     ) public onlyRole(OEM_ROLE) returns (uint256) {
+        // todo: Repair shop participants can also propose. However, you need to check if the repair shop is authorized to propose. 
+        // todo: To check this, you need to check if the repair shop has the NFT that implies that they are known by the OEM.
+        // todo: You probably need to refer to the NFT contract to check this.
         require(targets.length == values.length && targets.length == calldatas.length, "Invalid proposal");
         
         uint256 proposalId = proposalCount++;
