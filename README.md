@@ -43,3 +43,7 @@ pip3 install mythril
 `myth analyze contracts/Battery.sol --solv 0.8.20`
 - Generate a report
 `myth analyze contracts/Battery.sol -o markdown > mythril-report.md`
+
+
+#### Removed Project Cursor Rules
+- Implement timelocks for sensitive operations using OpenZeppelin's TimelockController.
