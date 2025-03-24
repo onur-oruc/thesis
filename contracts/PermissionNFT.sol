@@ -253,24 +253,24 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     /**
      * @dev Gets permission data by ID
      * @param tokenId ID of the permission
-     * @return id The token ID
-     * @return batteryId ID of the battery this permission applies to
-     * @return permType Type of permission (PERMANENT or TEMPORARY)
-     * @return expiryTime Timestamp when permission expires
-     * @return revoked Whether permission has been revoked
-     * @return canSubmitData Whether permission allows submitting data
-     * @return canReadData Whether permission allows reading data
-     * @return createdAt Timestamp when created
+     * @return tokenId_ The token ID
+     * @return batteryId_ ID of the battery this permission applies to
+     * @return permType_ Type of permission (PERMANENT or TEMPORARY)
+     * @return expiryTime_ Timestamp when permission expires
+     * @return revoked_ Whether permission has been revoked
+     * @return canSubmitData_ Whether permission allows submitting data
+     * @return canReadData_ Whether permission allows reading data
+     * @return createdAt_ Timestamp when created
      */
     function getPermission(uint256 tokenId) public view returns (
-        uint256 id,
-        uint256 batteryId,
-        PermissionType permType,
-        uint256 expiryTime,
-        bool revoked,
-        bool canSubmitData,
-        bool canReadData,
-        uint256 createdAt
+        uint256 tokenId_,
+        uint256 batteryId_,
+        PermissionType permType_,
+        uint256 expiryTime_,
+        bool revoked_,
+        bool canSubmitData_,
+        bool canReadData_,
+        uint256 createdAt_
     ) {
         require(_exists(tokenId), "Permission does not exist");
         
