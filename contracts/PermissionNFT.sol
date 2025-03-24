@@ -65,18 +65,18 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
      * @param to Address that will receive the permission NFT (typically repair shop)
      * @param batteryId ID of the battery this permission applies to
      * @param validityPeriod Duration in seconds that this permission is valid
-     * @param canSubmitData Whether this permission allows submitting new data
-     * @param canReadData Whether this permission allows reading private data
-     * @param tokenURI URI for permission metadata
+     * @param allowDataSubmission Whether this permission allows submitting new data
+     * @param allowDataReading Whether this permission allows reading private data
+     * @param uri URI for permission metadata
      * @return tokenId The ID of the newly minted permission NFT
      */
     function mintTemporaryPermission(
         address to,
         uint256 batteryId,
         uint256 validityPeriod,
-        bool canSubmitData,
-        bool canReadData,
-        string memory tokenURI
+        bool allowDataSubmission,
+        bool allowDataReading,
+        string memory uri
     ) public onlyRole(GOVERNANCE_ROLE) returns (uint256) {
         require(!_compromisedIdentities[to], "Recipient identity is compromised");
         
@@ -84,7 +84,7 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
         uint256 tokenId = _tokenIds.current();
         
         _mint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
         
         uint256 expiryTime = block.timestamp + validityPeriod;
         
@@ -94,8 +94,8 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
             permType: PermissionType.TEMPORARY,
             expiryTime: expiryTime,
             revoked: false,
-            canSubmitData: canSubmitData,
-            canReadData: canReadData,
+            canSubmitData: allowDataSubmission,
+            canReadData: allowDataReading,
             createdAt: block.timestamp
         });
         
@@ -109,14 +109,14 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     /**
      * @dev Creates a new permanent permission NFT (for known repair shops)
      * @param to Address that will receive the permission NFT
-     * @param canReadData Whether this permission allows reading private data
-     * @param tokenURI URI for permission metadata
+     * @param allowDataReading Whether this permission allows reading private data
+     * @param uri URI for permission metadata
      * @return tokenId The ID of the newly minted permission NFT
      */
     function mintPermanentPermission(
         address to,
-        bool canReadData,
-        string memory tokenURI
+        bool allowDataReading,
+        string memory uri
     ) public onlyRole(GOVERNANCE_ROLE) returns (uint256) {
         require(!_compromisedIdentities[to], "Recipient identity is compromised");
         
@@ -124,7 +124,7 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
         uint256 tokenId = _tokenIds.current();
         
         _mint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
         
         _permissions[tokenId] = PermissionData({
             tokenId: tokenId,
@@ -133,7 +133,7 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
             expiryTime: 0, // No expiry
             revoked: false,
             canSubmitData: false, // Permanent permissions are for verification only
-            canReadData: canReadData,
+            canReadData: allowDataReading,
             createdAt: block.timestamp
         });
         
