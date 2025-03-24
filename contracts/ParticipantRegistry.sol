@@ -4,218 +4,85 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title ParticipantRegistry
- * @dev Stores authorized wallet addresses for all system participants (OEMs, repair shops, etc.)
- * and tracks revoked/compromised wallet addresses with revocation timestamps
+ * @title CompromisedWalletRegistry
+ * @dev Tracks compromised wallet addresses with their revocation timestamps
+ * and maintains role hierarchy for compromise reporting
  */
-contract ParticipantRegistry is AccessControl {
+contract CompromisedWalletRegistry is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant OEM_ROLE = keccak256("OEM_ROLE");
     bytes32 public constant REPAIR_SHOP_ROLE = keccak256("REPAIR_SHOP_ROLE");
-    bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
 
-    enum ParticipantType { OEM, REPAIR_SHOP, GOVERNANCE, OTHER }
-
-    struct Participant {
-        address wallet;
-        ParticipantType participantType;
-        bool isValid;
-        uint256 registeredAt;
-        uint256 revokedAt;
-        string details;
-    }
-
-    // Mapping from wallet address to participant data
-    mapping(address => Participant) private _participants;
-    
-    // Arrays to track all participants by type
-    address[] private _oemAddresses;
-    address[] private _repairShopAddresses;
-    address[] private _governanceAddresses;
-    address[] private _otherAddresses;
-    
     // Mapping to track compromised wallets
     mapping(address => bool) private _compromisedWallets;
     
     // Mapping from wallet address to revocation timestamp
     mapping(address => uint256) private _revocationTimestamps;
 
-    event ParticipantRegistered(address indexed wallet, ParticipantType participantType);
-    event ParticipantRevoked(address indexed wallet, uint256 timestamp);
-    event WalletCompromised(address indexed wallet, uint256 timestamp);
+    // Mapping for storing reason for compromise
+    mapping(address => string) private _compromiseReasons;
+
+    // Mapping for storing who reported the compromise
+    mapping(address => address) private _compromiseReporters;
+
+    // Track all role members
+    mapping(bytes32 => address[]) private _roleMembers;
+
+    event WalletCompromised(address indexed wallet, address indexed reporter, uint256 timestamp, string reason);
+    event WalletRestored(address indexed wallet, uint256 timestamp);
 
     /**
-     * @dev Sets up the registry with initial admin
+     * @dev Sets up the registry with initial admin and role hierarchy
      */
     constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
+        
+        // Set up role hierarchy
+        _setRoleAdmin(OEM_ROLE, GOVERNANCE_ROLE);
+        _setRoleAdmin(REPAIR_SHOP_ROLE, OEM_ROLE);
     }
 
     /**
-     * @dev Registers a new OEM wallet
-     * @param wallet Address of the OEM wallet
-     * @param details Additional details about the OEM
-     */
-    function registerOEM(address wallet, string memory details) public onlyRole(ADMIN_ROLE) {
-        require(!_compromisedWallets[wallet], "Wallet is compromised");
-        require(!_participants[wallet].isValid, "Wallet already registered");
-        
-        _participants[wallet] = Participant({
-            wallet: wallet,
-            participantType: ParticipantType.OEM,
-            isValid: true,
-            registeredAt: block.timestamp,
-            revokedAt: 0,
-            details: details
-        });
-        
-        _oemAddresses.push(wallet);
-        _grantRole(OEM_ROLE, wallet);
-        
-        emit ParticipantRegistered(wallet, ParticipantType.OEM);
-    }
-
-    /**
-     * @dev Registers a new repair shop wallet
-     * @param wallet Address of the repair shop wallet
-     * @param details Additional details about the repair shop
-     */
-    function registerRepairShop(address wallet, string memory details) public onlyRole(ADMIN_ROLE) {
-        require(!_compromisedWallets[wallet], "Wallet is compromised");
-        require(!_participants[wallet].isValid, "Wallet already registered");
-        
-        _participants[wallet] = Participant({
-            wallet: wallet,
-            participantType: ParticipantType.REPAIR_SHOP,
-            isValid: true,
-            registeredAt: block.timestamp,
-            revokedAt: 0,
-            details: details
-        });
-        
-        _repairShopAddresses.push(wallet);
-        _grantRole(REPAIR_SHOP_ROLE, wallet);
-        
-        emit ParticipantRegistered(wallet, ParticipantType.REPAIR_SHOP);
-    }
-
-    /**
-     * @dev Registers a new governance wallet
-     * @param wallet Address of the governance wallet
-     * @param details Additional details about the governance entity
-     */
-    function registerGovernance(address wallet, string memory details) public onlyRole(ADMIN_ROLE) {
-        require(!_compromisedWallets[wallet], "Wallet is compromised");
-        require(!_participants[wallet].isValid, "Wallet already registered");
-        
-        _participants[wallet] = Participant({
-            wallet: wallet,
-            participantType: ParticipantType.GOVERNANCE,
-            isValid: true,
-            registeredAt: block.timestamp,
-            revokedAt: 0,
-            details: details
-        });
-        
-        _governanceAddresses.push(wallet);
-        _grantRole(GOVERNANCE_ROLE, wallet);
-        
-        emit ParticipantRegistered(wallet, ParticipantType.GOVERNANCE);
-    }
-
-    /**
-     * @dev Registers a wallet with custom type (OTHER)
-     * @param wallet Address of the wallet
-     * @param details Additional details
-     */
-    function registerOther(address wallet, string memory details) public onlyRole(ADMIN_ROLE) {
-        require(!_compromisedWallets[wallet], "Wallet is compromised");
-        require(!_participants[wallet].isValid, "Wallet already registered");
-        
-        _participants[wallet] = Participant({
-            wallet: wallet,
-            participantType: ParticipantType.OTHER,
-            isValid: true,
-            registeredAt: block.timestamp,
-            revokedAt: 0,
-            details: details
-        });
-        
-        _otherAddresses.push(wallet);
-        
-        emit ParticipantRegistered(wallet, ParticipantType.OTHER);
-    }
-
-    /**
-     * @dev Revokes a wallet's authorization
-     * @param wallet Address of the wallet to revoke
-     */
-    function revokeWallet(address wallet) public onlyRole(ADMIN_ROLE) {
-        require(_participants[wallet].isValid, "Wallet not registered or already revoked");
-        
-        _participants[wallet].isValid = false;
-        _participants[wallet].revokedAt = block.timestamp;
-        _revocationTimestamps[wallet] = block.timestamp;
-        
-        // Revoke roles based on participant type
-        ParticipantType pType = _participants[wallet].participantType;
-        
-        if (pType == ParticipantType.OEM) {
-            _revokeRole(OEM_ROLE, wallet);
-        } else if (pType == ParticipantType.REPAIR_SHOP) {
-            _revokeRole(REPAIR_SHOP_ROLE, wallet);
-        } else if (pType == ParticipantType.GOVERNANCE) {
-            _revokeRole(GOVERNANCE_ROLE, wallet);
-        }
-        
-        emit ParticipantRevoked(wallet, block.timestamp);
-    }
-
-    /**
-     * @dev Marks a wallet as compromised
+     * @dev Marks a wallet as compromised with proper role-based authorization
      * @param wallet Address of the compromised wallet
+     * @param reason Reason for marking wallet as compromised
      */
-    function markWalletAsCompromised(address wallet) public onlyRole(ADMIN_ROLE) {
-        _compromisedWallets[wallet] = true;
+    function markWalletAsCompromised(address wallet, string memory reason) public {
+        require(!_compromisedWallets[wallet], "Wallet already marked as compromised");
         
-        // Also revoke if it was a valid participant
-        if (_participants[wallet].isValid) {
-            revokeWallet(wallet);
+        // Check authorization based on wallet's role
+        if (hasRole(OEM_ROLE, wallet)) {
+            // Only GOVERNANCE_ROLE or ADMIN_ROLE can mark OEM as compromised
+            require(
+                hasRole(GOVERNANCE_ROLE, msg.sender) || hasRole(ADMIN_ROLE, msg.sender),
+                "Only governance can mark OEM as compromised"
+            );
+        } else if (hasRole(REPAIR_SHOP_ROLE, wallet)) {
+            // OEM_ROLE, GOVERNANCE_ROLE or ADMIN_ROLE can mark repair shop as compromised
+            require(
+                hasRole(OEM_ROLE, msg.sender) || 
+                hasRole(GOVERNANCE_ROLE, msg.sender) || 
+                hasRole(ADMIN_ROLE, msg.sender),
+                "Only OEM or governance can mark repair shop as compromised"
+            );
+        } else {
+            // For any other wallet, at least OEM role is required
+            require(
+                hasRole(OEM_ROLE, msg.sender) || 
+                hasRole(GOVERNANCE_ROLE, msg.sender) || 
+                hasRole(ADMIN_ROLE, msg.sender),
+                "Insufficient permissions to mark wallet as compromised"
+            );
         }
         
-        emit WalletCompromised(wallet, block.timestamp);
-    }
-
-    /**
-     * @dev Checks if a wallet is registered and valid
-     * @param wallet Address to check
-     * @return True if wallet is registered and valid
-     */
-    function isValidParticipant(address wallet) public view returns (bool) {
-        return _participants[wallet].isValid && !_compromisedWallets[wallet];
-    }
-
-    /**
-     * @dev Checks if a wallet is an OEM
-     * @param wallet Address to check
-     * @return True if wallet is a valid OEM
-     */
-    function isValidOEM(address wallet) public view returns (bool) {
-        return _participants[wallet].isValid && 
-               _participants[wallet].participantType == ParticipantType.OEM &&
-               !_compromisedWallets[wallet];
-    }
-
-    /**
-     * @dev Checks if a wallet is a repair shop
-     * @param wallet Address to check
-     * @return True if wallet is a valid repair shop
-     */
-    function isValidRepairShop(address wallet) public view returns (bool) {
-        return _participants[wallet].isValid && 
-               _participants[wallet].participantType == ParticipantType.REPAIR_SHOP &&
-               !_compromisedWallets[wallet];
+        _compromisedWallets[wallet] = true;
+        _revocationTimestamps[wallet] = block.timestamp;
+        _compromiseReasons[wallet] = reason;
+        _compromiseReporters[wallet] = msg.sender;
+        
+        emit WalletCompromised(wallet, msg.sender, block.timestamp, reason);
     }
 
     /**
@@ -228,64 +95,127 @@ contract ParticipantRegistry is AccessControl {
     }
 
     /**
-     * @dev Gets participant data
-     * @param wallet Address of the participant
-     * @return wallet_ The wallet address
-     * @return participantType_ Type of participant
-     * @return isValid_ Whether wallet is valid
-     * @return registeredAt_ Registration timestamp
-     * @return revokedAt_ Revocation timestamp (0 if not revoked)
-     * @return details_ Additional details
-     */
-    function getParticipant(address wallet) public view returns (
-        address wallet_,
-        ParticipantType participantType_,
-        bool isValid_,
-        uint256 registeredAt_,
-        uint256 revokedAt_,
-        string memory details_
-    ) {
-        Participant storage participant = _participants[wallet];
-        return (
-            participant.wallet,
-            participant.participantType,
-            participant.isValid && !_compromisedWallets[wallet],
-            participant.registeredAt,
-            participant.revokedAt,
-            participant.details
-        );
-    }
-
-    /**
-     * @dev Gets all OEM addresses
-     * @return Array of all OEM addresses (including revoked ones)
-     */
-    function getAllOEMs() public view returns (address[] memory) {
-        return _oemAddresses;
-    }
-
-    /**
-     * @dev Gets all repair shop addresses
-     * @return Array of all repair shop addresses (including revoked ones)
-     */
-    function getAllRepairShops() public view returns (address[] memory) {
-        return _repairShopAddresses;
-    }
-
-    /**
-     * @dev Gets all governance addresses
-     * @return Array of all governance addresses (including revoked ones)
-     */
-    function getAllGovernance() public view returns (address[] memory) {
-        return _governanceAddresses;
-    }
-
-    /**
      * @dev Gets the revocation timestamp for a wallet
      * @param wallet Address to check
-     * @return Timestamp when wallet was revoked (0 if not revoked)
+     * @return Timestamp when wallet was marked as compromised (0 if not compromised)
      */
     function getRevocationTimestamp(address wallet) public view returns (uint256) {
         return _revocationTimestamps[wallet];
+    }
+
+    /**
+     * @dev Gets the reason why a wallet was marked as compromised
+     * @param wallet Address to check
+     * @return Reason string
+     */
+    function getCompromiseReason(address wallet) public view returns (string memory) {
+        require(_compromisedWallets[wallet], "Wallet is not compromised");
+        return _compromiseReasons[wallet];
+    }
+
+    /**
+     * @dev Gets the address that reported a wallet as compromised
+     * @param wallet Address to check
+     * @return Reporter address
+     */
+    function getCompromiseReporter(address wallet) public view returns (address) {
+        require(_compromisedWallets[wallet], "Wallet is not compromised");
+        return _compromiseReporters[wallet];
+    }
+
+    /**
+     * @dev Restores a compromised wallet (use with caution)
+     * @param wallet Address to restore
+     */
+    function restoreWallet(address wallet) public onlyRole(ADMIN_ROLE) {
+        require(_compromisedWallets[wallet], "Wallet is not compromised");
+        
+        _compromisedWallets[wallet] = false;
+        delete _revocationTimestamps[wallet];
+        delete _compromiseReasons[wallet];
+        delete _compromiseReporters[wallet];
+        
+        emit WalletRestored(wallet, block.timestamp);
+    }
+    
+    /**
+     * @dev Sets governance role for a contract or address
+     * @param governanceAddress Address to receive governance role
+     */
+    function setGovernanceRole(address governanceAddress) external onlyRole(ADMIN_ROLE) {
+        _grantCustomRole(GOVERNANCE_ROLE, governanceAddress);
+    }
+
+    /**
+     * @dev Sets OEM role for an address
+     * @param oemAddress Address to receive OEM role
+     */
+    function setOEMRole(address oemAddress) external onlyRole(GOVERNANCE_ROLE) {
+        _grantCustomRole(OEM_ROLE, oemAddress);
+    }
+
+    /**
+     * @dev Sets repair shop role for an address
+     * @param repairShopAddress Address to receive repair shop role
+     */
+    function setRepairShopRole(address repairShopAddress) external onlyRole(OEM_ROLE) {
+        _grantCustomRole(REPAIR_SHOP_ROLE, repairShopAddress);
+    }
+    
+    /**
+     * @dev Removes a role from an address
+     * @param role Role to remove
+     * @param account Address to remove role from
+     */
+    function revokeRole(bytes32 role, address account) public override onlyRole(getRoleAdmin(role)) {
+        super.revokeRole(role, account);
+        
+        // Remove from role members list
+        address[] storage members = _roleMembers[role];
+        for (uint256 i = 0; i < members.length; i++) {
+            if (members[i] == account) {
+                // Replace with last element and remove last (efficient array removal)
+                members[i] = members[members.length - 1];
+                members.pop();
+                break;
+            }
+        }
+    }
+    
+    /**
+     * @dev Internal function to grant role and track member
+     * @param role Role to grant
+     * @param account Account to grant role to
+     */
+    function _grantCustomRole(bytes32 role, address account) internal {
+        if (!hasRole(role, account)) {
+            _grantRole(role, account);
+            _roleMembers[role].push(account);
+        }
+    }
+    
+    /**
+     * @dev Gets all addresses with a specific role
+     * @param role Role to query
+     * @return Array of addresses with the role
+     */
+    function getRoleMembers(bytes32 role) public view returns (address[] memory) {
+        return _roleMembers[role];
+    }
+    
+    /**
+     * @dev Gets all OEM addresses
+     * @return Array of OEM addresses
+     */
+    function getAllOEMs() public view returns (address[] memory) {
+        return getRoleMembers(OEM_ROLE);
+    }
+    
+    /**
+     * @dev Gets all repair shop addresses
+     * @return Array of repair shop addresses
+     */
+    function getAllRepairShops() public view returns (address[] memory) {
+        return getRoleMembers(REPAIR_SHOP_ROLE);
     }
 } 
