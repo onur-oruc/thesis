@@ -6,12 +6,17 @@ const config: HardhatUserConfig = {
     sources: "./contracts",
   },
   solidity: {
-    version: "0.8.28",
+    version: "0.8.20",
     settings: {
       optimizer: {
         enabled: true,
         runs: 200
       }
+    }
+  },
+  networks: {
+    ganache: {
+      url: "http://127.0.0.1:7545"
     }
   }
 };

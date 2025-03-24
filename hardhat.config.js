@@ -5,8 +5,8 @@ module.exports = {
       url: "http://127.0.0.1:7545", // Default Ganache GUI URL
       // If using CLI with different port: "http://127.0.0.1:8545"
       accounts: {
-        // Use your private keys from Ganache here or use mnemonic
-        mnemonic: "your ganache mnemonic here"
+        // Leave empty to use default accounts from Ganache
+        mnemonic: "tank cousin skin across legend crack smoke wing habit gloom balcony bright"
       }
     }
   }
