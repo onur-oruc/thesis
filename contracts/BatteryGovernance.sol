@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./PermissionNFT.sol";
 
 /**
  * @title BatteryGovernance
@@ -17,6 +18,9 @@ contract BatteryGovernance is AccessControl {
     /// @param CRITICAL Proposals requiring 2-of-3 approvals (battery issuance, permissions)
     /// @param ROUTINE Proposals requiring 1-of-3 approvals (data updates)
     enum ProposalType { UNKNOWN, CRITICAL, ROUTINE }
+    
+    /// @dev Reference to the PermissionNFT contract for checking repair shop authorization
+    PermissionNFT public permissionNFT;
     
     /**
      * @dev Structure containing all proposal data
@@ -68,12 +72,21 @@ contract BatteryGovernance is AccessControl {
     }
     
     /**
+     * @dev Sets the PermissionNFT contract reference
+     * @param _permissionNFT Address of the deployed PermissionNFT contract
+     */
+    function setPermissionNFT(address _permissionNFT) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        permissionNFT = PermissionNFT(_permissionNFT);
+    }
+    
+    /**
      * @dev Creates a new proposal for OEM approval
      * @param targets The contract addresses to call if proposal passes
      * @param values The ETH values to send with each call (usually 0)
      * @param calldatas The call data for each target function call
      * @param description Human-readable explanation of the proposal
      * @param proposalType CRITICAL (2-of-3) or ROUTINE (1-of-3) approval requirement
+     * @param batteryId Optional battery ID if proposal is related to a specific battery
      * @return proposalId Unique identifier for the created proposal
      */
     function propose(
@@ -81,11 +94,32 @@ contract BatteryGovernance is AccessControl {
         uint256[] memory values,
         bytes[] memory calldatas,
         string memory description,
-        ProposalType proposalType
-    ) public onlyRole(OEM_ROLE) returns (uint256) {
-        // todo: Repair shop participants can also propose. However, you need to check if the repair shop is authorized to propose. 
-        // todo: To check this, you need to check if the repair shop has the NFT that implies that they are known by the OEM.
-        // todo: You probably need to refer to the NFT contract to check this.
+        ProposalType proposalType,
+        uint256 batteryId
+    ) public returns (uint256) {
+        // Check if sender is OEM or authorized repair shop
+        bool isAuthorized = hasRole(OEM_ROLE, msg.sender);
+        
+        // If not OEM, check if repair shop has valid permission
+        if (!isAuthorized && address(permissionNFT) != address(0)) {
+            // For ROUTINE proposals (data updates), repair shops need battery-specific permission
+            if (proposalType == ProposalType.ROUTINE && batteryId > 0) {
+                isAuthorized = permissionNFT.canSubmitDataForBattery(msg.sender, batteryId);
+            }
+            
+            // For known repair shops with permanent permission NFT
+            if (!isAuthorized) {
+                isAuthorized = permissionNFT.canReadData(msg.sender);
+            }
+        }
+        
+        require(isAuthorized, "Not authorized to propose");
+        
+        // CRITICAL proposals can only be created by OEMs
+        if (proposalType == ProposalType.CRITICAL) {
+            require(hasRole(OEM_ROLE, msg.sender), "Only OEMs can create CRITICAL proposals");
+        }
+        
         require(targets.length == values.length && targets.length == calldatas.length, "Invalid proposal");
         
         uint256 proposalId = proposalCount++;
