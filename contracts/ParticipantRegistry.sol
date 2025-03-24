@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title CompromisedWalletRegistry
+ * @title ParticipantRegistry
  * @dev Tracks compromised wallet addresses with their revocation timestamps
  * and maintains role hierarchy for compromise reporting
  */
-contract CompromisedWalletRegistry is AccessControl {
+contract ParticipantRegistry is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant OEM_ROLE = keccak256("OEM_ROLE");
@@ -42,6 +42,38 @@ contract CompromisedWalletRegistry is AccessControl {
         // Set up role hierarchy
         _setRoleAdmin(OEM_ROLE, GOVERNANCE_ROLE);
         _setRoleAdmin(REPAIR_SHOP_ROLE, OEM_ROLE);
+    }
+    
+    /**
+     * @dev Returns the admin role identifier
+     * @return bytes32 ADMIN_ROLE
+     */
+    function getAdminRole() external pure returns (bytes32) {
+        return ADMIN_ROLE;
+    }
+    
+    /**
+     * @dev Returns the governance role identifier
+     * @return bytes32 GOVERNANCE_ROLE
+     */
+    function getGovernanceRole() external pure returns (bytes32) {
+        return GOVERNANCE_ROLE;
+    }
+    
+    /**
+     * @dev Returns the OEM role identifier
+     * @return bytes32 OEM_ROLE
+     */
+    function getOEMRole() external pure returns (bytes32) {
+        return OEM_ROLE;
+    }
+    
+    /**
+     * @dev Returns the repair shop role identifier
+     * @return bytes32 REPAIR_SHOP_ROLE
+     */
+    function getRepairShopRole() external pure returns (bytes32) {
+        return REPAIR_SHOP_ROLE;
     }
 
     /**

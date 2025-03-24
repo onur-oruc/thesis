@@ -3,16 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./PermissionNFT.sol";
+import "./ParticipantRegistry.sol";
 
 /**
  * @title BatteryGovernance
  * @dev Implements a customized governance system for battery data management with tiered approval requirements.
  * This contract allows OEM participants to propose and vote on actions with different thresholds based on criticality.
  */
-contract BatteryGovernance is AccessControl {
-    /// @dev Role identifier for OEM participants authorized to create and vote on proposals
-    bytes32 public constant OEM_ROLE = keccak256("OEM_ROLE");
-    
+contract BatteryGovernance {
     /// @dev Types of proposals with different approval thresholds
     /// @param UNKNOWN Default placeholder for uninitialized proposals
     /// @param CRITICAL Proposals requiring 2-of-3 approvals (battery issuance, permissions)
@@ -21,6 +19,12 @@ contract BatteryGovernance is AccessControl {
     
     /// @dev Reference to the PermissionNFT contract for checking repair shop authorization
     PermissionNFT public permissionNFT;
+    
+    /// @dev Reference to the ParticipantRegistry contract for role verification
+    ParticipantRegistry public participantRegistry;
+    
+    /// @dev Original deployer of the contract
+    address public immutable deployer;
     
     /**
      * @dev Structure containing all proposal data
@@ -60,22 +64,48 @@ contract BatteryGovernance is AccessControl {
     event VoteCast(uint256 proposalId, address voter);
     
     /**
-     * @dev Sets up the governance contract with initial OEM participants
-     * @param _initialOEMs Array of addresses for initial OEM representatives
+     * @dev Modifier to ensure caller has the specified role
+     * @param role The role identifier
      */
-    constructor(address[] memory _initialOEMs) {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        
-        for (uint256 i = 0; i < _initialOEMs.length; i++) {
-            _grantRole(OEM_ROLE, _initialOEMs[i]);
-        }
+    modifier onlyRole(bytes32 role) {
+        require(
+            participantRegistry.hasRole(role, msg.sender),
+            "Caller does not have the required role"
+        );
+        _;
+    }
+    
+    /**
+     * @dev Modifier to ensure caller is not compromised
+     */
+    modifier notCompromised() {
+        require(
+            !participantRegistry.isCompromised(msg.sender),
+            "Wallet is compromised"
+        );
+        _;
+    }
+    
+    /**
+     * @dev Sets up the governance contract with registry reference
+     * @param _participantRegistry Address of the participant registry contract
+     */
+    constructor(address _participantRegistry) {
+        require(_participantRegistry != address(0), "Invalid registry address");
+        participantRegistry = ParticipantRegistry(_participantRegistry);
+        deployer = msg.sender;
     }
     
     /**
      * @dev Sets the PermissionNFT contract reference
      * @param _permissionNFT Address of the deployed PermissionNFT contract
      */
-    function setPermissionNFT(address _permissionNFT) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPermissionNFT(address _permissionNFT) external {
+        require(
+            msg.sender == deployer || 
+            participantRegistry.hasRole(participantRegistry.getAdminRole(), msg.sender),
+            "Caller is not authorized"
+        );
         permissionNFT = PermissionNFT(_permissionNFT);
     }
     
@@ -96,9 +126,9 @@ contract BatteryGovernance is AccessControl {
         string memory description,
         ProposalType proposalType,
         uint256 batteryId
-    ) public returns (uint256) {
+    ) public notCompromised returns (uint256) {
         // Check if sender is OEM or authorized repair shop
-        bool isAuthorized = hasRole(OEM_ROLE, msg.sender);
+        bool isAuthorized = participantRegistry.hasRole(participantRegistry.getOEMRole(), msg.sender);
         
         // If not OEM, check if repair shop has valid permission
         if (!isAuthorized && address(permissionNFT) != address(0)) {
@@ -117,7 +147,10 @@ contract BatteryGovernance is AccessControl {
         
         // CRITICAL proposals can only be created by OEMs
         if (proposalType == ProposalType.CRITICAL) {
-            require(hasRole(OEM_ROLE, msg.sender), "Only OEMs can create CRITICAL proposals");
+            require(
+                participantRegistry.hasRole(participantRegistry.getOEMRole(), msg.sender),
+                "Only OEMs can create CRITICAL proposals"
+            );
         }
         
         require(targets.length == values.length && targets.length == calldatas.length, "Invalid proposal");
@@ -142,7 +175,13 @@ contract BatteryGovernance is AccessControl {
      * This function automatically executes the proposal when the required
      * threshold is met (2 votes for CRITICAL, 1 vote for ROUTINE)
      */
-    function castVote(uint256 proposalId) public onlyRole(OEM_ROLE) {
+    function castVote(uint256 proposalId) public notCompromised {
+        // Ensure voter is an OEM
+        require(
+            participantRegistry.hasRole(participantRegistry.getOEMRole(), msg.sender),
+            "Only OEMs can vote"
+        );
+        
         Proposal storage proposal = proposals[proposalId];
         require(!proposal.executed, "Already executed");
         require(!proposal.hasVoted[msg.sender], "Already voted");
