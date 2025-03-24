@@ -21,14 +21,14 @@ contract PermissionNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     enum PermissionType { PERMANENT, TEMPORARY }
 
     struct PermissionData {
-        uint256 tokenId;
-        uint256 batteryId;
-        PermissionType permType;
-        uint256 expiryTime;
-        bool revoked;
-        bool canSubmitData;
-        bool canReadData;
-        uint256 createdAt;
+        uint256 tokenId;        // Unique identifier for the permission NFT
+        uint256 batteryId;      // ID of battery this permission applies to (0 for permanent permissions)
+        PermissionType permType; // Type of permission (PERMANENT or TEMPORARY)
+        uint256 expiryTime;     // Timestamp when permission expires (0 for permanent permissions)
+        bool revoked;           // Whether this permission has been revoked by an OEM
+        bool canSubmitData;     // Whether holder can submit data updates for the battery
+        bool canReadData;       // Whether holder can access encrypted private data
+        uint256 createdAt;      // Timestamp when permission was created
     }
 
     // Mapping from token ID to permission data

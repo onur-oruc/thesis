@@ -22,23 +22,23 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     enum NFTType { BATTERY, MODULE }
 
     struct BatteryData {
-        uint256 tokenId;
-        NFTType nftType;
-        string encryptedData;
-        string dataHash;
-        uint256[] moduleIds;
-        uint256 createdAt;
-        string latestUpdateTxId;
+        uint256 tokenId;        // Unique identifier for the battery NFT
+        NFTType nftType;        // Type identifier (BATTERY) to distinguish from modules
+        string encryptedData;   // Private battery data encrypted with OEM's key
+        string dataHash;        // Hash of unencrypted data for verification purposes
+        uint256[] moduleIds;    // IDs of all modules linked to this battery
+        uint256 createdAt;      // Timestamp when battery was created
+        string latestUpdateTxId; // Reference to most recent update transaction
     }
 
     struct ModuleData {
-        uint256 tokenId;
-        NFTType nftType;
-        string encryptedData;
-        string dataHash;
-        uint256 batteryId;
-        uint256 createdAt;
-        string latestUpdateTxId;
+        uint256 tokenId;        // Unique identifier for the module NFT
+        NFTType nftType;        // Type identifier (MODULE) to distinguish from batteries
+        string encryptedData;   // Private module data encrypted with OEM's key
+        string dataHash;        // Hash of unencrypted data for verification purposes
+        uint256 batteryId;      // ID of the parent battery this module belongs to
+        uint256 createdAt;      // Timestamp when module was created
+        string latestUpdateTxId; // Reference to most recent update transaction
     }
 
     // Mapping from token ID to battery data
