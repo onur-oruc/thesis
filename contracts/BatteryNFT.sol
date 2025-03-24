@@ -45,7 +45,9 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     mapping(uint256 => BatteryData) private _batteries;
     // Mapping from token ID to module data
     mapping(uint256 => ModuleData) private _modules;
-    // Mapping for battery update registry
+    // Mapping for battery update registry. 
+    // These registries map a token ID to an array of transaction IDs (string[]), 
+    // where each transaction ID represents a point in the update history.
     mapping(uint256 => string[]) private _batteryUpdateRegistry;
     // Mapping for module update registry
     mapping(uint256 => string[]) private _moduleUpdateRegistry;
@@ -77,20 +79,20 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
      * @param to Address that will own the NFT
      * @param encryptedData Encrypted private battery data
      * @param dataHash Hash of the unencrypted data for verification
-     * @param tokenURI URI for battery metadata
+     * @param uri URI for battery metadata
      * @return tokenId The ID of the newly minted battery NFT
      */
     function mintBattery(
         address to,
         string memory encryptedData,
         string memory dataHash,
-        string memory tokenURI
+        string memory uri
     ) public onlyRole(GOVERNANCE_ROLE) returns (uint256) {
         _batteryIds.increment();
         uint256 tokenId = _batteryIds.current();
         
         _mint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
         
         _batteries[tokenId] = BatteryData({
             tokenId: tokenId,
@@ -112,7 +114,7 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
      * @param batteryId ID of the parent battery
      * @param encryptedData Encrypted private module data
      * @param dataHash Hash of the unencrypted data for verification
-     * @param tokenURI URI for module metadata
+     * @param uri URI for module metadata
      * @return tokenId The ID of the newly minted module NFT
      */
     function mintModule(
@@ -120,7 +122,7 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
         uint256 batteryId,
         string memory encryptedData,
         string memory dataHash,
-        string memory tokenURI
+        string memory uri
     ) public onlyRole(GOVERNANCE_ROLE) returns (uint256) {
         require(_exists(batteryId), "Battery does not exist");
         require(_batteries[batteryId].nftType == NFTType.BATTERY, "Token is not a battery");
@@ -129,7 +131,7 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
         uint256 tokenId = _moduleIds.current();
         
         _mint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, uri);
         
         _modules[tokenId] = ModuleData({
             tokenId: tokenId,
