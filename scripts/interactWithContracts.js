@@ -24,7 +24,6 @@ async function main() {
   console.log("Using OEM account:", oem1.address);
 
   // Create data for the battery
-  const sampleEncryptedData = "This is encrypted battery data";
   const sampleDataHash = "0x123456789abcdef";
   const sampleURI = "https://example.com/battery/1";
   
@@ -32,7 +31,7 @@ async function main() {
   const batteryInterface = batteryNFT.interface;
   const mintBatteryCalldata = batteryInterface.encodeFunctionData(
     "mintBattery",
-    [oem1.address, sampleEncryptedData, sampleDataHash, sampleURI]
+    [oem1.address, sampleDataHash, sampleURI]
   );
   
   console.log("Creating proposal to mint battery...");
@@ -84,11 +83,10 @@ async function main() {
       console.log("Battery details:", {
         tokenId: batteryDetails[0].toString(),
         nftType: batteryDetails[1],
-        encryptedData: batteryDetails[2],
-        dataHash: batteryDetails[3],
-        moduleIds: batteryDetails[4].map(id => id.toString()),
-        createdAt: new Date(Number(batteryDetails[5]) * 1000).toISOString(),
-        latestUpdateTxId: batteryDetails[6]
+        dataHash: batteryDetails[2],
+        moduleIds: batteryDetails[3].map(id => id.toString()),
+        createdAt: new Date(Number(batteryDetails[4]) * 1000).toISOString(),
+        latestUpdateTxId: batteryDetails[5]
       });
     }
   } catch (error) {
