@@ -47,3 +47,39 @@ pip3 install mythril
 
 #### Removed Project Cursor Rules
 - Implement timelocks for sensitive operations using OpenZeppelin's TimelockController.
+
+## OpenZeppelin Dependencies
+
+This project relies on several OpenZeppelin contracts to ensure security, standardization, and best practices:
+
+### ERC721 Extensions
+
+- **ERC721URIStorage**: Extends the ERC721 standard with storage based token URI management.
+  - Used in BatteryNFT and PermissionNFT contracts to store metadata URIs for each token.
+  - Documentation: https://docs.openzeppelin.com/contracts/4.x/api/token/erc721#ERC721URIStorage
+
+- **ERC721Enumerable**: Extends the ERC721 standard with enumeration capabilities.
+  - Used to keep track of all tokens in existence and their owners.
+  - Enables on-chain enumeration of all tokens or tokens owned by a specific address.
+  - Documentation: https://docs.openzeppelin.com/contracts/4.x/api/token/erc721#ERC721Enumerable
+
+### Access Control
+
+- **AccessControl**: Provides role-based access control mechanisms.
+  - Used to manage different roles (OEM, GOVERNANCE) and their permissions.
+  - Allows for granular control over who can mint, update, or transfer tokens.
+  - Documentation: https://docs.openzeppelin.com/contracts/4.x/api/access#AccessControl
+
+### Utilities
+
+- **Counters**: Provides a simple way to create and manage counters.
+  - Used to generate unique sequential IDs for battery and module tokens.
+  - Prevents overflow and race conditions when creating new tokens.
+  - Documentation: https://docs.openzeppelin.com/contracts/4.x/api/utils#Counters
+
+### Governance
+
+- **TimelockController**: Implements a timelock mechanism for governance actions.
+  - Used in the BatteryTimelock contract to enforce delays before executing sensitive operations.
+  - Adds a security layer by allowing time for review of pending actions.
+  - Documentation: https://docs.openzeppelin.com/contracts/4.x/api/governance#TimelockController
