@@ -1,3 +1,43 @@
+/**
+ * Battery Passport on Blockchain - Deployment Script
+ * ==================================================
+ * 
+ * This script deploys the entire battery passport system, including all smart contracts
+ * and their initial configuration. It demonstrates the complete deployment flow required
+ * to set up the system from scratch.
+ * 
+ * The deployment process involves:
+ * 
+ * 1. Deploying core contracts in the correct dependency order:
+ *    - ParticipantRegistry: Manages roles and tracks compromised wallets
+ *    - BatteryGovernance: Provides tiered approval mechanism for system actions
+ *    - PermissionNFT: Handles temporary and permanent permissions for repair shops
+ *    - BatteryNFT: Manages battery and battery module NFTs and their relations
+ *    - DataRegistry: Stores references to off-chain battery data with locations and encryption info
+ * 
+ * 2. Configuring contract references:
+ *    - Setting the PermissionNFT contract reference in the Governance contract
+ *    - Setting the DataRegistry reference in the BatteryNFT contract
+ * 
+ * 3. Setting up the role-based access control system:
+ *    - Granting GOVERNANCE_ROLE to the deployer in BatteryNFT for admin tasks
+ *    - Configuring the role hierarchy in ParticipantRegistry
+ *    - Granting GOVERNANCE_ROLE to the governance contract in ParticipantRegistry
+ *    - Assigning OEM_ROLE to initial OEM addresses
+ * 
+ * 4. Saving deployed contract addresses for use by other demo scripts
+ * 
+ * The script uses the first 8 addresses from Hardhat's built-in accounts:
+ * - Deployer (admin who deploys all contracts)
+ * - OEM1, OEM2, OEM3 (three addresses representing OEM representatives)
+ * - RepairShop1, RepairShop2 (repair shop addresses for demo scenarios)
+ * - Gov1, Gov2 (government representatives)
+ * 
+ * This deployment creates a fully functional battery passport system ready for the
+ * demonstration of battery NFT creation, permission management, battery data updates,
+ * and compromised wallet handling in subsequent demo scripts.
+ */
+
 // Script to deploy all contracts for the demo
 const hre = require("hardhat");
 
