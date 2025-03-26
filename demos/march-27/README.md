@@ -70,6 +70,8 @@ For upcoming development cycles, we plan to:
    - Complete the revoked wallets functionality
 
 5. **Make Contracts Upgradable**
+6. **Battery Module Creation**
+   - Currently, the battery
 
 ## Demo Content
 
