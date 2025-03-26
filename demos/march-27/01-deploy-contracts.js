@@ -68,20 +68,47 @@ async function main() {
   await setPermissionTx.wait();
   console.log("PermissionNFT set in BatteryGovernance");
 
+  // Grant GOVERNANCE_ROLE to deployer in BatteryNFT
+  console.log("\nGranting GOVERNANCE_ROLE to deployer in BatteryNFT...");
+  const GOVERNANCE_ROLE = await batteryNFT.GOVERNANCE_ROLE();
+  await batteryNFT.grantRole(GOVERNANCE_ROLE, deployer.address);
+  console.log("GOVERNANCE_ROLE granted to deployer in BatteryNFT");
+
   // Set DataRegistry in BatteryNFT
+  console.log("\nSetting DataRegistry in BatteryNFT...");
   const setDataRegistryTx = await batteryNFT.setDataRegistry(dataRegistryAddress);
   await setDataRegistryTx.wait();
   console.log("DataRegistry set in BatteryNFT");
 
   // Set up roles in ParticipantRegistry
   console.log("\nSetting up roles in ParticipantRegistry...");
-  // Grant Governance role
-  await participantRegistry.grantRole(await participantRegistry.GOVERNANCE_ROLE(), governanceAddress);
+  
+  // Make sure deployer has GOVERNANCE_ROLE in ParticipantRegistry
+  console.log("Checking if deployer has GOVERNANCE_ROLE in ParticipantRegistry...");
+  // Check if the deployer already has the GOVERNANCE_ROLE
+  const govRole = await participantRegistry.GOVERNANCE_ROLE();
+  const hasGovRole = await participantRegistry.hasRole(govRole, deployer.address);
+  
+  if (!hasGovRole) {
+    // The deployer should have ADMIN_ROLE by default (from constructor)
+    // So we can grant GOVERNANCE_ROLE to ourselves first
+    console.log("Granting GOVERNANCE_ROLE to deployer...");
+    await participantRegistry.grantRole(govRole, deployer.address);
+    console.log("GOVERNANCE_ROLE granted to deployer");
+  } else {
+    console.log("Deployer already has GOVERNANCE_ROLE");
+  }
+  
+  // Grant Governance role to the governance contract
+  console.log("Granting GOVERNANCE_ROLE to governance contract...");
+  await participantRegistry.grantRole(govRole, governanceAddress);
   console.log("Governance role granted to governance contract");
   
   // Grant OEM roles
+  const oemRole = await participantRegistry.getOEMRole();
+  console.log("Granting OEM_ROLE to OEMs...");
   for (const oemAddress of initialOEMs) {
-    await participantRegistry.grantRole(await participantRegistry.getOEMRole(), oemAddress);
+    await participantRegistry.grantRole(oemRole, oemAddress);
     console.log(`OEM role granted to ${oemAddress}`);
   }
 
