@@ -69,6 +69,8 @@ For upcoming development cycles, we plan to:
    - Add key rotation mechanisms
    - Complete the revoked wallets functionality
 
+5. **Make Contracts Upgradable**
+
 ## Demo Content
 
 The demo scripts in this directory showcase the core functionality of our system, including:
