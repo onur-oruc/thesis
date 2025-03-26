@@ -71,7 +71,12 @@ For upcoming development cycles, we plan to:
 
 5. **Make Contracts Upgradable**
 6. **Battery Module Creation**
-   - Currently, the battery
+   - Currently, the battery NFT creation works but the module creation does not!
+   - Therefore, we cannot create and link modules to battery NFTs for now. 
+   >>>
+    the BatteryNFT contract has a design flaw with module creation - it uses the same token ID space for both batteries and modules but tracks them with separate counters, causing conflicts when creating modules. A fix would involve using a separate ID space for modules (like starting at ID 1000 or using separate NFT contracts).
+   >>>
+
 
 ## Demo Content
 
