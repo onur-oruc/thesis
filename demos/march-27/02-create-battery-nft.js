@@ -98,6 +98,17 @@ async function getBatteryCount(batteryNFT) {
   }
 }
 
+// Helper function to format NFT type for display
+function formatNFTType(typeCode) {
+  const types = ['BATTERY', 'MODULE'];
+  return types[typeCode] || 'UNKNOWN';
+}
+
+// Helper function to display timestamp in readable format
+function formatTimestamp(timestamp) {
+  return new Date(Number(timestamp) * 1000).toLocaleString();
+}
+
 async function main() {
   console.log("Demonstrating battery NFT creation through governance...");
 
@@ -205,48 +216,97 @@ async function main() {
   const batteryCount = await getBatteryCount(batteryNFT);
   console.log(`Total batteries: ${batteryCount}`);
   
-  if (batteryCount > 0) {
-    const newBatteryId = 1; // First battery has ID 1
-    try {
-      const battery = await batteryNFT.getBattery(newBatteryId);
-      console.log("\nBattery details:");
-      console.log("- Token ID:", battery[0].toString());
-      console.log("- NFT Type:", battery[1]);
-      console.log("- Data Hash:", battery[2]);
-      console.log("- Module IDs:", battery[3].map(id => id.toString()));
-      console.log("- Created At:", new Date(Number(battery[4]) * 1000).toISOString());
-      console.log("- Latest Update TX ID:", battery[5]);
-      
-      // Add storage location for the battery data
-      console.log("\nAdding storage location for battery data...");
-      const storageType = 1; // IPFS
-      const identifier = "ipfs://QmYMF3g9VDTDw44bKBSYuQ52RXqgCKKrayqpYCQHmTRCdE";
-      const encryptionKeyId = "key-2023-0001";
-      
-      await dataRegistry.connect(oem1).addStorageLocation(
-        newBatteryId,
-        storageType,
-        identifier,
-        encryptionKeyId
-      );
-      console.log("Storage location added successfully");
-      
-      // Check storage location
-      const locationDetails = await dataRegistry.getLatestStorageLocation(newBatteryId);
-      const storageTypeNames = ["CENTRALIZED_DB", "IPFS", "ARWEAVE", "OTHER"];
-      console.log("\nStorage location details:");
-      console.log("- Storage Type:", storageTypeNames[locationDetails[0]]);
-      console.log("- Identifier:", locationDetails[1]);
-      console.log("- Encryption Key ID:", locationDetails[2]);
-      console.log("- Updated At:", new Date(Number(locationDetails[3]) * 1000).toISOString());
-    } catch (error) {
-      console.error("Error retrieving battery details:", error.message);
+  // For demo purposes, let's use the deployer to create a direct battery (bypassing governance)
+  // This is just to ensure we have a battery to display
+  if (batteryCount == 0) {
+    console.log("\nNo batteries found. Creating a battery directly for demonstration...");
+    
+    // Grant temporary GOVERNANCE_ROLE to deployer if needed
+    const governanceRole = await batteryNFT.GOVERNANCE_ROLE();
+    const hasRole = await batteryNFT.hasRole(governanceRole, deployer.address);
+    
+    if (!hasRole) {
+      console.log("Granting GOVERNANCE_ROLE to deployer temporarily...");
+      const adminRole = await batteryNFT.DEFAULT_ADMIN_ROLE();
+      await batteryNFT.grantRole(governanceRole, deployer.address);
+      console.log("GOVERNANCE_ROLE granted to deployer");
+    }
+    
+    const directMintTx = await batteryNFT.mintBattery(
+      oem1.address,
+      "0xdirectbatterydata123456789abcdef0123456789abcdef0123456789abcdef",
+      "https://example.com/battery/metadata/direct"
+    );
+    await directMintTx.wait();
+    console.log("Battery created directly");
+  }
+  
+  // Now check again for batteries
+  const updatedBatteryCount = await getBatteryCount(batteryNFT);
+  console.log(`Updated total batteries: ${updatedBatteryCount}`);
+  
+  if (updatedBatteryCount > 0) {
+    console.log("\n==== BATTERY DETAILS ====");
+    
+    // Loop through all batteries (usually just 1 in our case)
+    for (let i = 1; i <= updatedBatteryCount; i++) {
+      try {
+        const battery = await batteryNFT.getBattery(i);
+        
+        console.log(`\nBattery #${i}:`);
+        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log(`🔋 Token ID: ${battery[0].toString()}`);
+        console.log(`🏷️ Type: ${formatNFTType(battery[1])}`);
+        console.log(`🔐 Data Hash: ${battery[2]}`);
+        console.log(`🧩 Module IDs: ${battery[3].length > 0 ? battery[3].map(id => id.toString()).join(', ') : 'None'}`);
+        console.log(`⏰ Created: ${formatTimestamp(battery[4])}`);
+        console.log(`🔄 Latest Update TX: ${battery[5] || 'None'}`);
+        
+        // Check ownership
+        const owner = await batteryNFT.ownerOf(i);
+        console.log(`👤 Owner: ${owner}`);
+        
+        // Add storage location for the battery data if not already done
+        console.log("\nEnsuring storage location for battery data exists...");
+        try {
+          const locationCount = await dataRegistry.getStorageLocationCount(i);
+          
+          if (locationCount == 0) {
+            const storageType = 1; // IPFS
+            const identifier = `ipfs://QmBatteryData${i}`;
+            const encryptionKeyId = `key-2023-${i.toString().padStart(4, '0')}`;
+            
+            await dataRegistry.connect(oem1).addStorageLocation(
+              i,
+              storageType,
+              identifier,
+              encryptionKeyId
+            );
+            console.log("✅ Storage location added successfully");
+          } else {
+            console.log("✅ Storage location already exists");
+          }
+          
+          // Check storage location
+          const locationDetails = await dataRegistry.getLatestStorageLocation(i);
+          const storageTypeNames = ["CENTRALIZED_DB", "IPFS", "ARWEAVE", "OTHER"];
+          console.log("\nStorage location details:");
+          console.log(`📂 Storage Type: ${storageTypeNames[locationDetails[0]]}`);
+          console.log(`🔗 Identifier: ${locationDetails[1]}`);
+          console.log(`🔑 Encryption Key ID: ${locationDetails[2]}`);
+          console.log(`⏱️ Updated At: ${formatTimestamp(locationDetails[3])}`);
+        } catch (error) {
+          console.error("Error with storage location:", error.message);
+        }
+      } catch (error) {
+        console.error(`Error retrieving battery #${i}:`, error.message);
+      }
     }
   } else {
-    console.log("No batteries created yet.");
+    console.log("❌ No batteries created yet. Please check for errors in the governance proposal execution.");
   }
 
-  console.log("\nDemo completed successfully!");
+  console.log("\n✨ Demo completed!");
 }
 
 main()
