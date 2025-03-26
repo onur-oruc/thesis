@@ -89,6 +89,22 @@ contract BatteryNFT is ERC721URIStorage, ERC721Enumerable, AccessControl {
     }
 
     /**
+     * @dev Returns the current number of batteries in the system
+     * @return The current battery count
+     */
+    function getBatteryCount() public view returns (uint256) {
+        return _batteryIds.current();
+    }
+
+    /**
+     * @dev Returns the current number of modules in the system
+     * @return The current module count
+     */
+    function getModuleCount() public view returns (uint256) {
+        return _moduleIds.current();
+    }
+
+    /**
      * @dev Creates a new battery NFT
      * @param to Address that will own the NFT
      * @param dataHash Hash of the unencrypted data for verification

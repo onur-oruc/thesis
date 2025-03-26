@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "./PermissionNFT.sol";
 import "./ParticipantRegistry.sol";
 
@@ -11,6 +12,8 @@ import "./ParticipantRegistry.sol";
  * This contract allows OEM participants to propose and vote on actions with different thresholds based on criticality.
  */
 contract BatteryGovernance {
+    using Counters for Counters.Counter;
+
     /// @dev Types of proposals with different approval thresholds
     /// @param UNKNOWN Default placeholder for uninitialized proposals
     /// @param CRITICAL Proposals requiring 2-of-3 approvals (battery issuance, permissions)
@@ -52,6 +55,9 @@ contract BatteryGovernance {
     mapping(uint256 => Proposal) public proposals;
     
     /// @dev Counter to generate unique proposal IDs
+    Counters.Counter private _proposalIds;
+    
+    /// @dev Public getter for current proposal count
     uint256 public proposalCount;
     
     /// @dev Emitted when a new proposal is created
@@ -155,7 +161,9 @@ contract BatteryGovernance {
         
         require(targets.length == values.length && targets.length == calldatas.length, "Invalid proposal");
         
-        uint256 proposalId = proposalCount++;
+        uint256 proposalId = _proposalIds.current();
+        _proposalIds.increment();
+        proposalCount = _proposalIds.current();
         Proposal storage proposal = proposals[proposalId];
         
         proposal.targets = targets;
@@ -202,6 +210,29 @@ contract BatteryGovernance {
             _execute(proposalId);
         }
     }
+
+    /**
+     * @dev Executes a proposal that has reached its voting threshold
+     * @param proposalId The ID of the proposal to execute
+     * 
+     * This function can be called manually after sufficient votes have been collected,
+     * or it is called automatically by castVote when thresholds are met.
+     */
+    function execute(uint256 proposalId) public notCompromised {
+        Proposal storage proposal = proposals[proposalId];
+        
+        // Check if proposal can be executed
+        require(!proposal.executed, "Already executed");
+        
+        // Check if threshold is met
+        if (proposal.proposalType == ProposalType.CRITICAL) {
+            require(proposal.forVotes >= 2, "Not enough votes for critical proposal");
+        } else {
+            require(proposal.forVotes >= 1, "Not enough votes for routine proposal");
+        }
+        
+        _execute(proposalId);
+    }
     
     /**
      * @dev Internal function to execute an approved proposal
@@ -220,5 +251,13 @@ contract BatteryGovernance {
         
         proposal.executed = true;
         emit ProposalExecuted(proposalId);
+    }
+
+    /**
+     * @dev Returns the current proposal count from the counter
+     * @return The current proposal count
+     */
+    function getCurrentProposalCount() external view returns (uint256) {
+        return _proposalIds.current();
     }
 } 
