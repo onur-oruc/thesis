@@ -273,25 +273,22 @@ async function main() {
         console.log(`👤 Owner: ${owner}`);
         
         // Add storage location for the battery data if not already done
-        console.log("\nEnsuring storage location for battery data exists...");
+        console.log("\nSetting up storage location for battery data...");
         try {
-          const locationCount = await dataRegistry.getStorageLocationCount(i);
+          // Use different storage types for each battery
+          const storageType = i === 1 ? 0 : 2; // CENTRALIZED_DB for first battery, ARWEAVE for second
+          const identifierPrefix = i === 1 ? "db://" : "ar://";
+          const identifier = `${identifierPrefix}BatteryData${i}`;
+          const encryptionKeyId = `key-2023-${i.toString().padStart(4, '0')}`;
           
-          if (locationCount == 0) {
-            const storageType = 1; // IPFS
-            const identifier = `ipfs://QmBatteryData${i}`;
-            const encryptionKeyId = `key-2023-${i.toString().padStart(4, '0')}`;
-            
-            await dataRegistry.connect(oem1).addStorageLocation(
-              i,
-              storageType,
-              identifier,
-              encryptionKeyId
-            );
-            console.log("✅ Storage location added successfully");
-          } else {
-            console.log("✅ Storage location already exists");
-          }
+          // Always add a new storage location to demonstrate different types
+          await dataRegistry.connect(oem1).addStorageLocation(
+            i,
+            storageType,
+            identifier,
+            encryptionKeyId
+          );
+          console.log("✅ Storage location set successfully");
           
           // Check storage location
           const locationDetails = await dataRegistry.getLatestStorageLocation(i);
