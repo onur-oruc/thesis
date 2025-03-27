@@ -11,6 +11,7 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat ignition deploy ./ignition/modules/Lock.ts
 npx hardhat run demos/march-27/run-all.js
+npx hardhat run demos/march-27/02-create-battery-nft.js --network localhost
 ```
 
 ## Security Analysis Tools

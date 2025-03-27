@@ -233,7 +233,7 @@ async function main() {
     }
     
     // Create enough batteries to have a total of 2
-    for (let i = batteryCount; i < 2; i++) {
+    for (let i = Number(batteryCount); i < 2; i++) {
       const directMintTx = await batteryNFT.mintBattery(
         oem1.address,
         "0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
