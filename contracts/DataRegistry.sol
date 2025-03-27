@@ -19,7 +19,7 @@ contract DataRegistry is AccessControl {
         uint256 batteryId;          // ID of the battery NFT
         StorageType storageType;    // Type of storage used
         string identifier;          // Identifier or path in the storage system
-        string encryptionKeyId;     // ID of the encryption key used (not the key itself)
+        string encryptionKeyId;     // ID of the encryption key used
         uint256 updatedAt;          // Last update timestamp
         bool isValid;               // Whether this location is still valid
     }

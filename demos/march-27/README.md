@@ -82,6 +82,10 @@ For upcoming development cycles, we plan to:
    - Storing the hash of the private data is fine, but we also need to store the public data on Arweave and attach it's transaction hash in the DataRegistry. Remember that the public data does not need to be encyrpted. It's plain data will be stored on Arweave and the hash and the transaction_if of the Arweave will be stored on-chain.
 9. **DataRegistry Extra Fields**
    - See the issue in Linear for details.
+10. **Decrypted Data Request by Repair Shops**
+   - We have a way to store the private data but not a way to request the decrypted version for Repair Shops.
+11. **Actions After the Lifecycle of Batteries**
+   - How should we handle the scenario where a battery is retired or recycled? Should we implement a specific "retirement" function in the BatteryNFT contract? 
 
 ## Demo Content
 
