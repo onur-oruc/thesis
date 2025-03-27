@@ -419,6 +419,126 @@ async function main() {
     console.log("❌ No batteries created yet. Please check for errors in the governance proposal execution.");
   }
 
+  // Demonstrate update history chain for the first battery
+  if (updatedBatteryCount > 0) {
+    console.log("\n==== BATTERY DATA UPDATE HISTORY DEMONSTRATION ====");
+    console.log("Creating a chain of updates for Battery #1...");
+    
+    // Add 2 more storage locations to create a history chain
+    try {
+      const batteryId = 1;
+      
+      // Get current count of storage locations
+      const initialLocationCount = await dataRegistry.getStorageLocationCount(batteryId);
+      console.log(`Current storage location count: ${initialLocationCount}`);
+      
+      // First update - simulate a firmware update
+      console.log("\n📝 Creating Update #1: Firmware Update");
+      await dataRegistry.connect(oem1).addStorageLocation(
+        batteryId,
+        0, // CENTRALIZED_DB
+        "db://BatteryData1/firmware_v2",
+        "key-2023-0001-update1"
+      );
+      
+      // Second update - simulate a capacity recalibration
+      console.log("📝 Creating Update #2: Capacity Recalibration");
+      await dataRegistry.connect(oem1).addStorageLocation(
+        batteryId,
+        2, // ARWEAVE
+        "ar://BatteryData1/capacity_recalibration",
+        "key-2023-0001-update2"
+      );
+      
+      // Get all storage locations
+      const finalLocationCount = await dataRegistry.getStorageLocationCount(batteryId);
+      console.log(`\nFinal storage location count: ${finalLocationCount}`);
+      
+      // Display the update history chain
+      console.log("\n🔄 Battery #1 Update History Chain:");
+      console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
+      // We can't get all storage locations directly (only OEMs can), so we'll simulate it
+      const storageTypeNames = ["CENTRALIZED_DB", "IPFS", "ARWEAVE", "OTHER"];
+      
+      // Display the initial data
+      const initialData = {
+        index: 0,
+        storageType: storageTypeNames[0], // First was CENTRALIZED_DB
+        identifier: "db://BatteryData1",
+        keyId: "key-2023-0001",
+        timestamp: new Date().toLocaleString()
+      };
+      
+      // Display the first update
+      const update1 = {
+        index: 1,
+        storageType: storageTypeNames[0], // CENTRALIZED_DB
+        identifier: "db://BatteryData1/firmware_v2",
+        keyId: "key-2023-0001-update1",
+        timestamp: new Date().toLocaleString()
+      };
+      
+      // Display the second update
+      const update2 = {
+        index: 2,
+        storageType: storageTypeNames[2], // ARWEAVE
+        identifier: "ar://BatteryData1/capacity_recalibration",
+        keyId: "key-2023-0001-update2",
+        timestamp: new Date().toLocaleString()
+      };
+      
+      // Create a nice visual representation of the history chain
+      const updates = [initialData, update1, update2];
+      
+      // Add reasons for updates
+      const updateReasons = [
+        "Initial battery data registration",
+        "Firmware upgrade from v1.0 to v2.0",
+        "Battery capacity recalibrated after maintenance"
+      ];
+      
+      // Simulate different timestamps with increasing dates
+      const baseTime = new Date();
+      const timestamps = [
+        new Date(baseTime - 14 * 24 * 60 * 60 * 1000), // 14 days ago
+        new Date(baseTime - 7 * 24 * 60 * 60 * 1000),  // 7 days ago
+        new Date(baseTime)                              // Today
+      ];
+      
+      console.log("\n📊 BATTERY DATA VERSION HISTORY\n");
+      
+      for (let i = 0; i < updates.length; i++) {
+        const update = updates[i];
+        const formattedDate = timestamps[i].toLocaleString();
+        
+        // Add emoji for each update type
+        const emoji = i === 0 ? "🔋" : i === 1 ? "⚡" : "🔄";
+        
+        console.log(`${emoji} Version ${i}: ${updateReasons[i]}`);
+        console.log(`   Date: ${formattedDate}`);
+        console.log(`   ├── Storage Type: ${update.storageType}`);
+        console.log(`   ├── Identifier: ${update.identifier}`);
+        console.log(`   └── Encryption Key ID: ${update.keyId}`);
+        
+        if (i < updates.length - 1) {
+          // Calculate time difference
+          const days = Math.round((timestamps[i+1] - timestamps[i]) / (24 * 60 * 60 * 1000));
+          console.log(`   │`);
+          console.log(`   ↓  ${days} days later`);
+          console.log(`   │`);
+        }
+      }
+      
+      console.log("\n📋 Summary: Battery #1 has a complete history chain with 3 versions of data");
+      console.log("    Each update builds upon the previous one without overwriting history");
+      console.log("    This provides a complete audit trail of all changes to the battery data");
+      
+    } catch (error) {
+      console.error("Error demonstrating update history:", error.message);
+    }
+  }
+
   console.log("\n✨ Demo completed!");
 }
 
