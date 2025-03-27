@@ -1,3 +1,113 @@
+/**
+ * # Battery Passport System Overview
+ *
+ * ## Governance and Proposal Logic
+ * 
+ * ### Proposal Workflow
+ * 1. Any OEM with the right role creates a proposal to mint a new battery NFT through `BatteryGovernance.propose()`.
+ * 2. The proposal includes:
+ *    - Target contract(s) to call (usually BatteryNFT)
+ *    - Function call data (encoded mint function)
+ *    - Operation type (CRITICAL or ROUTINE)
+ *    - Battery ID (0 for new batteries)
+ * 
+ * ### Voting Requirements
+ * - **Critical operations** (battery creation): Requires 2-of-3 OEM approvals
+ * - **Routine operations** (data updates): Requires 1-of-3 OEM approval
+ * - When the threshold is met, the proposal executes automatically
+ * - The threshold is determined by the `proposalType` parameter (value 1 for CRITICAL)
+ * 
+ * ### Execution Process
+ * - Voting happens through `castVote()` function
+ * - When required votes are received, the battery creation is executed through the governance contract
+ * - The governance contract has GOVERNANCE_ROLE in the BatteryNFT contract, allowing it to mint
+ * 
+ * ## Storage Implementation
+ * 
+ * ### Multi-Tiered Storage Architecture
+ * 1. **On-chain component**: Basic NFT data + storage location pointers
+ * 2. **Off-chain component**: Actual battery data stored in various systems
+ * 
+ * ### Storage Locations
+ * - Each battery can have multiple storage locations, representing different versions of data
+ * - The `DataRegistry` contract maps battery IDs to their storage locations
+ * - Storage types supported: CENTRALIZED_DB, IPFS, ARWEAVE, OTHER
+ * 
+ * ### Storage Reference Process
+ * 1. Battery NFT is created with a data hash (integrity reference)
+ * 2. Storage location is registered in `DataRegistry` with:
+ *    - Storage type (enum value)
+ *    - Identifier (pointer to off-chain location)
+ *    - Encryption key ID (reference to the key, not the actual key)
+ * 3. Applications retrieve the pointer from blockchain and access actual data off-chain
+ * 
+ * ### Data Updates
+ * - New storage locations can be added (creating a history chain)
+ * - Latest storage location is tracked for efficient access
+ * - Previous locations remain accessible for audit
+ * 
+ * ## Role-Based Access Control
+ * 
+ * ### Key Roles
+ * - **DEFAULT_ADMIN_ROLE**: Can grant/revoke other roles
+ * - **GOVERNANCE_ROLE**: Held by governance contract, allows minting batteries
+ * - **OEM_ROLE**: Allows managing storage locations and battery data
+ * 
+ * ### Role Enforcement
+ * - All critical functions are protected by `onlyRole` modifiers
+ * - Battery NFT creation restricted to governance contract
+ * - Storage location management restricted to OEMs
+ * - Different operations require different approval thresholds
+ * 
+ * ## Latest Update TX
+ * 
+ * - `Latest Update TX` refers to the transaction hash of the most recent update to the battery data
+ * - Stored in the battery NFT struct to provide a reference to the transaction that last modified the battery
+ * - Helps in auditing changes and tracking the history of modifications
+ * - Acts as a pointer to find detailed update information on the blockchain
+ * 
+ * ## Additional Important Details
+ * 
+ * ### Battery Data Integrity
+ * - Data hashes stored on-chain ensure integrity of off-chain data
+ * - Hashes verify that off-chain data hasn't been tampered with
+ * 
+ * ### Multi-Storage Strategy
+ * - Multiple storage types provide redundancy and flexibility
+ * - IPFS/Arweave for decentralized, immutable storage
+ * - Centralized DB for quick access and complex queries
+ * - Users can choose the best storage for their needs
+ * 
+ * ### Version Control System
+ * - Multiple storage locations for the same battery create a version history
+ * - Each new storage location entry keeps a timestamp
+ * - Previous records are kept for auditability
+ * 
+ * ### Encryption Key Management
+ * - Encryption keys are referenced but not stored on-chain
+ * - Key IDs link to off-chain secure key storage
+ * - This prevents sensitive cryptographic material from being exposed
+ * 
+ * ### Module Linking
+ * - Batteries can be linked to multiple battery modules (components)
+ * - This creates a digital representation of the physical battery structure
+ * - Modules can be replaced and tracked throughout the battery lifecycle
+ * 
+ * ### Event-Driven Architecture
+ * - Key actions emit events (StorageLocationAdded, etc.)
+ * - Events allow efficient indexing and notification systems
+ * - External systems can monitor events to trigger actions
+ * 
+ * ### Scalability Considerations
+ * - Battery data is kept off-chain to reduce blockchain bloat
+ * - On-chain component stays small and focused on verification and reference
+ * 
+ * ### Security Model
+ * - Two-factor security: Access control + encryption
+ * - Separation of concerns between governance and data management
+ * - Tiered approval requirements based on operation criticality
+ */
+
 // Script to demonstrate battery NFT creation through governance
 // This demonstrates the process of creating a battery NFT through the governance system with tiered approval requirements
 

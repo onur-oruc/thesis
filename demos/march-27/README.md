@@ -80,6 +80,8 @@ For upcoming development cycles, we plan to:
    - Instead of using hardcoded hash values for demo purposes, implement a system where the hash of the value can actually be created on the fly (!)
 8. **Public vs Private Data**
    - Storing the hash of the private data is fine, but we also need to store the public data on Arweave and attach it's transaction hash in the DataRegistry. Remember that the public data does not need to be encyrpted. It's plain data will be stored on Arweave and the hash and the transaction_if of the Arweave will be stored on-chain.
+9. **DataRegistry Extra Fields**
+   - See the issue in Linear for details.
 
 ## Demo Content
 
